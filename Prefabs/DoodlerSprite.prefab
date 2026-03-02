@@ -130,7 +130,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d53cab3cbc4d5614a85dafa2d5d9f21b, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::DoodlerController
   jumpForce: 12
   gravityScale: 1
@@ -145,3 +145,10 @@ MonoBehaviour:
   platformTopTolerance: 0.1
   leftBoundary: -3
   rightBoundary: 3
+  flipVelocityThreshold: 0.1
+  idleSprite: {fileID: 1499567985400848262, guid: e37a1435fa3e7c140beacbb5796a0c81, type: 3}
+  walkSprites:
+  - {fileID: -5321330015276728506, guid: f0a577cd75d96b64b83f7544e1c8d390, type: 3}
+  - {fileID: 3288175129669233799, guid: 3dc07e00ef00638478ed33c5312b3a15, type: 3}
+  jumpSprite: {fileID: -6317904820854502685, guid: 8785e8971e19d49428662305c4574526, type: 3}
+  fallSprite: {fileID: -4830660248509101871, guid: 0b07009e8cdee944ab6687e9fd06ac7d, type: 3}

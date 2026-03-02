@@ -11,16 +11,16 @@ public class DoodlerController : MonoBehaviour
     [SerializeField] private float jumpForce = 12f;
     [SerializeField] private float gravityScale = 3f;
     [SerializeField] private float maxFallSpeed = -15f;
-    
+
     [Header("Движение")]
     [SerializeField] private float moveSpeed = 8f;
     [SerializeField] private float acceleration = 50f;
     [SerializeField] private float deceleration = 30f;
-    
+
     [Header("Проверка земли")]
     [SerializeField] private float groundCheckDistance = 0.55f;
     [SerializeField] private LayerMask platformLayerMask;
-    
+
     [Header("Настройки коллизий")]
     [SerializeField] private float platformTopTolerance = 0.1f;
 
@@ -28,17 +28,29 @@ public class DoodlerController : MonoBehaviour
     [SerializeField] private float leftBoundary = -3f;
     [SerializeField] private float rightBoundary = 3f;
 
+    [Header("Анимация")]
+    [SerializeField] private float flipVelocityThreshold = 0.1f;
+    [SerializeField] private Sprite idleSprite;
+    [SerializeField] private Sprite[] walkSprites;
+    [SerializeField] private Sprite jumpSprite;
+    [SerializeField] private Sprite fallSprite;
+
     private Rigidbody2D _rigidbody;
     private float _horizontalInput;
     private float _currentVelocityX;
     private Collider2D _playerCollider;
+    private SpriteRenderer _spriteRenderer;
+    private bool _isGrounded;
+    private float _walkFrameTimer;
+    private int _currentWalkFrame;
 
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
         _playerCollider = GetComponent<Collider2D>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
         _rigidbody.gravityScale = gravityScale;
-        
+
         // Устанавливаем тег Player для камеры
         if (!CompareTag("Player"))
         {
@@ -51,7 +63,8 @@ public class DoodlerController : MonoBehaviour
         HandleMovement();
         CheckGround();
         ClampPosition();
-        
+        UpdateAnimation();
+
         // Ограничиваем скорость падения
         if (_rigidbody.linearVelocity.y < maxFallSpeed)
         {
@@ -118,6 +131,8 @@ public class DoodlerController : MonoBehaviour
         Vector2 rayOrigin = (Vector2)transform.position;
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, groundCheckDistance, platformLayerMask);
 
+        _isGrounded = false; // Сбрасываем флаг
+
         if (hit.collider != null)
         {
             // Проверяем, что игрок находится ВЫШЕ платформы (ноги около верха платформы)
@@ -127,6 +142,8 @@ public class DoodlerController : MonoBehaviour
             // Игрок должен быть чуть выше платформы и падать вниз
             if (playerBottom >= platformTop - platformTopTolerance && _rigidbody.linearVelocity.y <= 0f)
             {
+                _isGrounded = true; // Игрок на земле
+
                 // Вызываем событие на платформе (для бонусных платформ)
                 Platform platform = hit.collider.GetComponent<Platform>();
                 if (platform != null)
@@ -137,7 +154,7 @@ public class DoodlerController : MonoBehaviour
                         platform.OnPlayerJump();
                         return; // Не вызываем обычный Jump()
                     }
-                    
+
                     platform.OnPlayerJump();
                 }
 
@@ -174,6 +191,69 @@ public class DoodlerController : MonoBehaviour
     }
 
     /// <summary>
+    /// Обновляет параметры анимации.
+    /// </summary>
+    private void UpdateAnimation()
+    {
+        if (_spriteRenderer == null) return;
+
+        // Определяем состояние и выбираем спрайт
+        Sprite currentSprite;
+        bool isMoving = Mathf.Abs(_currentVelocityX) > flipVelocityThreshold;
+
+        if (!_isGrounded)
+        {
+            // В воздухе
+            if (_rigidbody.linearVelocity.y > 0)
+            {
+                currentSprite = jumpSprite; // Прыжок
+            }
+            else
+            {
+                currentSprite = fallSprite; // Падение
+            }
+        }
+        else if (isMoving)
+        {
+            // Анимация ходьбы
+            _walkFrameTimer += Time.deltaTime;
+            if (_walkFrameTimer >= 0.1f) // Смена кадра каждые 0.1 сек
+            {
+                _walkFrameTimer = 0f;
+                _currentWalkFrame = (_currentWalkFrame + 1) % walkSprites.Length;
+            }
+            currentSprite = walkSprites[_currentWalkFrame];
+        }
+        else
+        {
+            currentSprite = idleSprite; // Бездействие
+        }
+
+        _spriteRenderer.sprite = currentSprite;
+
+        // Разворачиваем спрайт в зависимости от направления движения
+        UpdateSpriteDirection();
+    }
+
+    /// <summary>
+    /// Разворачивает спрайт в зависимости от направления движения.
+    /// </summary>
+    private void UpdateSpriteDirection()
+    {
+        if (_spriteRenderer == null) return;
+
+        // Разворачиваем спрайт в направлении движения
+        if (_currentVelocityX > flipVelocityThreshold)
+        {
+            _spriteRenderer.flipX = false; // Движемся вправо
+        }
+        else if (_currentVelocityX < -flipVelocityThreshold)
+        {
+            _spriteRenderer.flipX = true; // Движемся влево
+        }
+    }
+
+    /// <summary>
     /// Публичный метод для сброса позиции (после Game Over).
     /// </summary>
     public void ResetPosition(Vector3 newPosition)
@@ -181,8 +261,9 @@ public class DoodlerController : MonoBehaviour
         transform.position = newPosition;
         _rigidbody.linearVelocity = Vector2.zero;
         _currentVelocityX = 0f;
+        _isGrounded = false;
     }
-    
+
     /// <summary>
     /// Публичный метод для настройки границ.
     /// </summary>
